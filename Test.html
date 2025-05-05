@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IPL Top 5 Stats Game</title>
+  <style>
+    :root {
+      --primary: #00bcd4;
+      --secondary: #ffffff;
+      --highlight: #ffeb3b;
+      --text: #212121;
+      --background: linear-gradient(to right, #f9d423, #ff4e50);
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --selected-bg: #ffc107;
+      --easy: #4CAF50;
+      --medium: #FFC107;
+      --hard: #F44336;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: var(--background);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .sidebar {
+      width: 320px;
+      background: #263238;
+      color: white;
+      border-left: 4px solid #0288d1;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+    }
+    .team-score {
+      margin-bottom: 20px;
+      background: #37474f;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .team-score h2 {
+      margin: 0 0 10px;
+    }
+    .score-bar {
+      height: 16px;
+      background: #b0bec5;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .score-fill {
+      height: 100%;
+      width: 0;
+      background: #ff5722;
+      transition: width 0.3s ease-in-out;
+    }
+    .score-controls button, .team-buttons button {
+      margin-top: 5px;
+      margin-right: 5px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #0288d1;
+      color: white;
+      font-weight: bold;
+    }
+    .team-buttons button.selected {
+      background-color: var(--selected-bg);
+      color: black;
+    }
+    .header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+    }
+    .header h1 {
+      color: white;
+      background-color: #009688;
+      padding: 10px 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .controls, .score-display, .game-container {
+      width: 100%;
+      max-width: 1000px;
+    }
+    .question-text {
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+      margin: 20px auto;
+      text-align: center;
+      padding: 10px 20px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      margin: 8px;
+      background: var(--card-bg);
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+    }
+    .row:hover {
+      transform: scale(1.02);
+      background: #f1f8e9;
+    }
+    .row.revealed {
+      background: var(--highlight);
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      font-size: 16px;
+    }
+    input[type="file"] {
+      margin-top: 10px;
+    }
+    .leaderboard {
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      width: 100%;
+      max-width: 1000px;
+    }
+    .leaderboard h2 {
+      margin-top: 0;
+      text-align: center;
+      color: var(--highlight);
+    }
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 10px;
+      margin: 5px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+    }
+    .leaderboard-item:nth-child(2) {
+      background: rgba(255, 215, 0, 0.3);
+    }
+    .leaderboard-item:nth-child(3) {
+      background: rgba(192, 192, 192, 0.3);
+    }
+    .leaderboard-item:nth-child(4) {
+      background: rgba(205, 127, 50, 0.3);
+    }
+    .timer {
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 20px;
+      border-radius: 50%;
+      margin: 10px;
+    }
+    .difficulty {
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-weight: bold;
+      color: white;
+    }
+    .difficulty.easy {
+      background: var(--easy);
+    }
+    .difficulty.medium {
+      background: var(--medium);
+    }
+    .difficulty.hard {
+      background: var(--hard);
+    }
+    .round-info {
+      font-size: 18px;
+      color: white;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 5px 15px;
+      border-radius: 20px;
+      margin-bottom: 10px;
+    }
+    .hint-button {
+      background: #9C27B0 !important;
+    }
+    .player-profiles {
+      display: flex;
+      justify-content: space-around;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    .player-profile {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px;
+      border-radius: 10px;
+      width: 45%;
+      text-align: center;
+    }
+    .endgame-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 100;
+      display: none;
+    }
+    .endgame-screen h1 {
+      font-size: 48px;
+      color: var(--highlight);
+      margin-bottom: 30px;
+    }
+    .endgame-screen button {
+      padding: 15px 30px;
+      font-size: 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    .admin-controls {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #546E7A;
+    }
+    .language-selector {
+      margin-bottom: 15px;
+    }
+    .sound-control {
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="header">
+      <h1>🏏 IPL Top 5 Stats Quiz</h1>
+      <div class="player-profiles" id="playerProfiles"></div>
+      <div class="leaderboard">
+        <h2>🏆 Leaderboard</h2>
+        <div id="leaderboardItems"></div>
+      </div>
+      <div class="round-info" id="roundInfo">Round 1: Easy</div>
+      <div class="timer" id="timer">30</div>
+      <input type="file" id="fileInput" accept=".xlsx,.csv">
+    </div>
+    <div class="question-info" id="questionInfo"></div>
+    <div class="question-text" id="questionText"></div>
+    <div class="controls">
+      <button id="hintBtn" class="hint-button">Get Hint (10% penalty)</button>
+      <button id="prevBtn">Previous</button>
+      <button id="nextBtn">Next</button>
+    </div>
+    <div class="game-container">
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div class="language-selector">
+      <h3>Language:</h3>
+      <select id="languageSelect">
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="te">Telugu</option>
+      </select>
+    </div>
+    <div class="sound-control">
+      <label><input type="checkbox" id="soundToggle" checked> Enable Sounds</label>
+    </div>
+    <div style="margin-bottom: 20px;">
+      <h3>Select Team:</h3>
+      <div class="team-buttons" id="teamButtons"></div>
+    </div>
+    <div style="margin-bottom: 20px;">
+      <input type="text" id="newTeamName" placeholder="New Team Name">
+      <button onclick="addTeam()">Add Team</button>
+    </div>
+    <div id="teamScoreContainer"></div>
+    <div class="admin-controls">
+      <h3>Admin Controls</h3>
+      <button onclick="skipToNextRound()">Skip to Next Round</button>
+      <button onclick="resetGame()">Reset Game</button>
+      <input type="text" id="adjustScoreTeam" placeholder="Team Name">
+      <input type="number" id="adjustScoreAmount" placeholder="Score Change">
+      <button onclick="adjustScore()">Adjust Score</button>
+    </div>
+  </div>
+  
+  <div class="endgame-screen" id="endgameScreen">
+    <h1 id="winnerMessage">Congratulations!</h1>
+    <div id="finalScores"></div>
+    <button onclick="resetGame()">Play Again</button>
+  </div>
+
+  <audio id="correctSound" src="https://www.soundjay.com/buttons/sounds/button-09.mp3" preload="auto"></audio>
+  <audio id="wrongSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3" preload="auto"></audio>
+  <audio id="timerSound" src="https://www.soundjay.com/buttons/sounds/beep-07.mp3" preload="auto"></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    // Game state
+    const fileInput = document.getElementById('fileInput');
+    const board = document.getElementById('board');
+    const questionText = document.getElementById('questionText');
+    const questionInfo = document.getElementById('questionInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const hintBtn = document.getElementById('hintBtn');
+    const teamButtons = document.getElementById('teamButtons');
+    const teamScoreContainer = document.getElementById('teamScoreContainer');
+    const leaderboardItems = document.getElementById('leaderboardItems');
+    const timerElement = document.getElementById('timer');
+    const roundInfo = document.getElementById('roundInfo');
+    const playerProfiles = document.getElementById('playerProfiles');
+    const endgameScreen = document.getElementById('endgameScreen');
+    const winnerMessage = document.getElementById('winnerMessage');
+    const finalScores = document.getElementById('finalScores');
+    const languageSelect = document.getElementById('languageSelect');
+    const soundToggle = document.getElementById('soundToggle');
+    const correctSound = document.getElementById('correctSound');
+    const wrongSound = document.getElementById('wrongSound');
+    const timerSound = document.getElementById('timerSound');
+
+    let questions = [];
+    let currentIndex = 0;
+    let revealed = [];
+    let teamScores = {};
+    let selectedTeam = '';
+    let timer = 30;
+    let timerInterval;
+    let currentRound = 1;
+    let rounds = [
+      { name: "Easy", difficulty: "easy", questions: [], time: 30 },
+      { name: "Medium", difficulty: "medium", questions: [], time: 45 },
+      { name: "Hard", difficulty: "hard", questions: [], time: 60 }
+    ];
+    let hintUsed = false;
+    let players = {
+      teamA: { name: "Team A Player", score: 0 },
+      teamB: { name: "Team B Player", score: 0 }
+    };
+    let translations = {
+      en: {
+        leaderboard: "🏆 Leaderboard",
+        round: "Round",
+        hint: "Get Hint (10% penalty)",
+        next: "Next",
+        previous: "Previous",
+        addTeam: "Add Team",
+        selectTeam: "Select Team:",
+        newTeam: "New Team Name",
+        timer: "Time",
+        correct: "Correct!",
+        wrong: "Wrong!",
+        timeUp: "Time's up!",
+        winner: "Congratulations to the winners!",
+        playAgain: "Play Again",
+        skipRound: "Skip to Next Round",
+        resetGame: "Reset Game",
+        adjustScore: "Adjust Score",
+        scoreChange: "Score Change",
+        enableSounds: "Enable Sounds",
+        language: "Language:",
+        adminControls: "Admin Controls"
+      },
+      hi: {
+        leaderboard: "🏆 लीडरबोर्ड",
+        round: "राउंड",
+        hint: "संकेत प्राप्त करें (10% जुर्माना)",
+        next: "अगला",
+        previous: "पिछला",
+        addTeam: "टीम जोड़ें",
+        selectTeam: "टीम चुनें:",
+        newTeam: "नई टीम का नाम",
+        timer: "समय",
+        correct: "सही!",
+        wrong: "गलत!",
+        timeUp: "समय समाप्त!",
+        winner: "विजेताओं को बधाई!",
+        playAgain: "फिर से खेलें",
+        skipRound: "अगले राउंड पर जाएं",
+        resetGame: "खेल रीसेट करें",
+        adjustScore: "स्कोर समायोजित करें",
+        scoreChange: "स्कोर परिवर्तन",
+        enableSounds: "ध्वनियाँ सक्षम करें",
+        language: "भाषा:",
+        adminControls: "एडमिन नियंत्रण"
+      },
+      te: {
+        leaderboard: "🏆 లీడర్బోర్డ్",
+        round: "రౌండ్",
+        hint: "సూచన పొందండి (10% జరిమానా)",
+        next: "తరువాత",
+        previous: "మునుపటి",
+        addTeam: "టీమ్ జోడించండి",
+        selectTeam: "టీమ్ ఎంచుకోండి:",
+        newTeam: "కొత్త టీమ్ పేరు",
+        timer: "సమయం",
+        correct: "సరైనది!",
+        wrong: "తప్పు!",
+        timeUp: "సమయం ముగిసింది!",
+        winner: "విజేతలకు అభినందనలు!",
+        playAgain: "మళ్లీ ఆడండి",
+        skipRound: "తర్వాతి రౌండ్కు వెళ్లండి",
+        resetGame: "గేమ్ రీసెట్ చేయండి",
+        adjustScore: "స్కోర్ సర్దుబాటు",
+        scoreChange: "స్కోర్ మార్పు",
+        enableSounds: "ధ్వనులను ప్రారంభించండి",
+        language: "భాష:",
+        adminControls: "అడ్మిన్ నియంత్రణలు"
+      }
+    };
+    let currentLanguage = 'en';
+
+    // Initialize game
+    function initGame() {
+      renderTeamButtons();
+      renderTeamScores();
+      updateLeaderboard();
+      updatePlayerProfiles();
+      updateUIText();
+      
+      // Set default teams if none exist
+      if (Object.keys(teamScores).length === 0) {
+        teamScores["Team A"] = 0;
+        teamScores["Team B"] = 0;
+        renderTeamButtons();
+        renderTeamScores();
+      }
+    }
+
+    // Update UI text based on selected language
+    function updateUIText() {
+      const lang = translations[currentLanguage];
+      document.querySelector('.leaderboard h2').textContent = lang.leaderboard;
+      hintBtn.textContent = lang.hint;
+      nextBtn.textContent = lang.next;
+      prevBtn.textContent = lang.previous;
+      document.getElementById('newTeamName').placeholder = lang.newTeam;
+      document.querySelector('.sidebar h3').textContent = lang.selectTeam;
+      document.querySelector('.admin-controls h3').textContent = lang.adminControls;
+      document.querySelector('.language-selector h3').textContent = lang.language;
+      soundToggle.nextSibling.textContent = lang.enableSounds;
+    }
+
+    // Language change handler
+    languageSelect.addEventListener('change', (e) => {
+      currentLanguage = e.target.value;
+      updateUIText();
+    });
+
+    // Render team buttons
+    function renderTeamButtons() {
+      teamButtons.innerHTML = '';
+      Object.keys(teamScores).forEach(team => {
+        const btn = document.createElement('button');
+        btn.textContent = team;
+        btn.className = selectedTeam === team ? 'selected' : '';
+        btn.onclick = () => {
+          selectedTeam = team;
+          renderTeamButtons();
+        };
+        teamButtons.appendChild(btn);
+      });
+    }
+
+    // Render team scores
+    function renderTeamScores() {
+      teamScoreContainer.innerHTML = '';
+      Object.entries(teamScores).forEach(([team, score]) => {
+        const teamDiv = document.createElement('div');
+        teamDiv.className = 'team-score';
+
+        const heading = document.createElement('h2');
+        heading.innerHTML = `${team} Score: <span id="score_${team}">${score}</span>`;
+        teamDiv.appendChild(heading);
+
+        const bar = document.createElement('div');
+        bar.className = 'score-bar';
+        const fill = document.createElement('div');
+        fill.className = 'score-fill';
+        fill.id = `fill_${team}`;
+        fill.style.width = `${Math.min(100, score)}%`;
+        bar.appendChild(fill);
+        teamDiv.appendChild(bar);
+
+        teamScoreContainer.appendChild(teamDiv);
+      });
+    }
+
+    // Update leaderboard
+    function updateLeaderboard() {
+      const sortedTeams = Object.entries(teamScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+      
+      leaderboardItems.innerHTML = '';
+      if (sortedTeams.length === 0) {
+        const item = document.createElement('div');
+        item.className = 'leaderboard-item';
+        item.textContent = 'No teams yet';
+        leaderboardItems.appendChild(item);
+        return;
+      }
+
+      sortedTeams.forEach(([team, score], index) => {
+        const item = document.createElement('div');
+        item.className = 'leaderboard-item';
+        item.innerHTML = `<span>${index + 1}. ${team}</span> <span>${score} pts</span>`;
+        leaderboardItems.appendChild(item);
+      });
+    }
+
+    // Add team
+    function addTeam() {
+      const teamName = document.getElementById('newTeamName').value.trim();
+      if (teamName && !teamScores[teamName]) {
+        teamScores[teamName] = 0;
+        renderTeamButtons();
+        renderTeamScores();
+        updateLeaderboard();
+        document.getElementById('newTeamName').value = '';
+      }
+    }
+
+    // Update score
+    function updateScore() {
+      Object.entries(teamScores).forEach(([team, score]) => {
+        document.getElementById(`score_${team}`).textContent = score;
+        document.getElementById(`fill_${team}`).style.width = `${Math.min(100, score)}%`;
+      });
+      updateLeaderboard();
+    }
+
+    // Adjust score manually (admin function)
+    function adjustScore() {
+      const team = document.getElementById('adjustScoreTeam').value.trim();
+      const amount = parseInt(document.getElementById('adjustScoreAmount').value);
+      
+      if (team && teamScores[team] !== undefined && !isNaN(amount)) {
+        teamScores[team] += amount;
+        updateScore();
+      }
+    }
+
+    // Start timer
+    function startTimer(seconds) {
+      clearInterval(timerInterval);
+      timer = seconds;
+      timerElement.textContent = timer;
+      
+      timerInterval = setInterval(() => {
+        timer--;
+        timerElement.textContent = timer;
+        
+        if (timer <= 5 && soundToggle.checked) {
+          timerSound.play();
+        }
+        
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          if (soundToggle.checked) {
+            wrongSound.play();
+          }
+          alert(translations[currentLanguage].timeUp);
+        }
+      }, 1000);
+    }
+
+    // Skip to next round
+    function skipToNextRound() {
+      if (currentRound < rounds.length) {
+        currentRound++;
+        setupRound();
+      } else {
+        endGame();
+      }
+    }
+
+    // Setup round
+    function setupRound() {
+      const round = rounds[currentRound - 1];
+      roundInfo.textContent = `${translations[currentLanguage].round} ${currentRound}: ${round.name}`;
+      startTimer(round.time);
+      loadQuestion(0);
+    }
+
+    // Load question
+    function loadQuestion(index) {
+      currentIndex = index;
+      revealed = [];
+      hintUsed = false;
+      hintBtn.disabled = false;
+      
+      const roundQuestions = rounds[currentRound - 1].questions;
+      if (roundQuestions.length === 0) return;
+      
+      const q = roundQuestions[index];
+      questionInfo.textContent = `${index + 1}/${roundQuestions.length}`;
+      questionText.innerHTML = `
+        <span class="difficulty ${q.Difficulty}">${q.Difficulty}</span>
+        ${q.Question}
+      `;
+      board.innerHTML = '';
+
+      for (let i = 1; i <= 5; i++) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const answer = q[`Option${i}`];
+        let score = parseInt(q[`Score${i}`]);
+        
+        // Adjust score based on difficulty
+        if (q.Difficulty === 'easy') score = Math.floor(score * 0.8);
+        if (q.Difficulty === 'hard') score = Math.floor(score * 1.2);
+        
+        row.innerHTML = `<span>${i}.</span> <span class="answer-text">${answer}</span> <span>+${score}</span>`;
+        row.querySelector('.answer-text').style.display = 'none';
+
+        row.onclick = () => {
+          if (!revealed[i]) {
+            row.classList.add('revealed');
+            row.querySelector('.answer-text').style.display = 'inline';
+            revealed[i] = true;
+            
+            if (selectedTeam && teamScores[selectedTeam] !== undefined) {
+              // Apply penalty if hint was used
+              const finalScore = hintUsed ? Math.floor(score * 0.9) : score;
+              teamScores[selectedTeam] += finalScore;
+              
+              // Add time bonus for correct answer
+              if (soundToggle.checked) {
+                correctSound.play();
+              }
+              timer += 10;
+              updateScore();
+            }
+          }
+        };
+        board.appendChild(row);
+      }
+    }
+
+    // Show hint
+    hintBtn.onclick = () => {
+      if (hintUsed) return;
+      
+      const roundQuestions = rounds[currentRound - 1].questions;
+      const q = roundQuestions[currentIndex];
+      
+      if (q.Hint) {
+        alert(`Hint: ${q.Hint}`);
+        hintUsed = true;
+        hintBtn.disabled = true;
+      } else {
+        alert("No hint available for this question");
+      }
+    };
+
+    // Previous question
+    prevBtn.onclick = () => {
+      if (currentIndex > 0) loadQuestion(--currentIndex);
+    };
+
+    // Next question
+    nextBtn.onclick = () => {
+      const roundQuestions = rounds[currentRound - 1].questions;
+      if (currentIndex < roundQuestions.length - 1) {
+        loadQuestion(++currentIndex);
+      } else {
+        if (currentRound < rounds.length) {
+          skipToNextRound();
+        } else {
+          endGame();
+        }
+      }
+    };
+
+    // Update player profiles
+    function updatePlayerProfiles() {
+      playerProfiles.innerHTML = '';
+      Object.entries(players).forEach(([team, player]) => {
+        const profile = document.createElement('div');
+        profile.className = 'player-profile';
+        profile.innerHTML = `
+          <h3>${player.name}</h3>
+          <p>Score: ${player.score}</p>
+        `;
+        playerProfiles.appendChild(profile);
+      });
+    }
+
+    // End game
+    function endGame() {
+      clearInterval(timerInterval);
+      
+      // Determine winner
+      const sortedTeams = Object.entries(teamScores).sort((a, b) => b[1] - a[1]);
+      const winner = sortedTeams[0][0];
+      const winnerScore = sortedTeams[0][1];
+      
+      // Display endgame screen
+      winnerMessage.textContent = `${translations[currentLanguage].winner} ${winner}!`;
+      
+      finalScores.innerHTML = '';
+      sortedTeams.forEach(([team, score]) => {
+        const scoreElement = document.createElement('div');
+        scoreElement.style.fontSize = '24px';
+        scoreElement.style.margin = '10px 0';
+        scoreElement.textContent = `${team}: ${score} points`;
+        finalScores.appendChild(scoreElement);
+      });
+      
+      endgameScreen.style.display = 'flex';
+    }
+
+    // Reset game
+    function resetGame() {
+      // Reset scores
+      Object.keys(teamScores).forEach(team => {
+        teamScores[team] = 0;
+      });
+      
+      // Reset round
+      currentRound = 1;
+      endgameScreen.style.display = 'none';
+      
+      // Reload questions if available
+      if (questions.length > 0) {
+        categorizeQuestions();
+        setupRound();
+      }
+      
+      updateScore();
+    }
+
+    // Categorize questions by difficulty
+    function categorizeQuestions() {
+      rounds.forEach(round => round.questions = []);
+      
+      questions.forEach(q => {
+        if (q.Difficulty) {
+          const difficulty = q.Difficulty.toLowerCase();
+          if (difficulty === 'easy') rounds[0].questions.push(q);
+          else if (difficulty === 'medium') rounds[1].questions.push(q);
+          else if (difficulty === 'hard') rounds[2].questions.push(q);
+        }
+      });
+    }
+
+    // File input handler
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        questions = XLSX.utils.sheet_to_json(sheet);
+        categorizeQuestions();
+        setupRound();
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Initialize game
+    initGame();
+  </script>
+</body>
+</html>

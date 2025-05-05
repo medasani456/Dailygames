@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>IPL Top 5 Stats Game</title>
+  <style>
+    :root {
+      --primary: #00bcd4;
+      --secondary: #ffffff;
+      --highlight: #ffeb3b;
+      --text: #212121;
+      --background: linear-gradient(to right, #f9d423, #ff4e50);
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --selected-bg: #ffc107;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: var(--background);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    .sidebar {
+      width: 320px;
+      background: #263238;
+      color: white;
+      border-left: 4px solid #0288d1;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: -2px 0 5px rgba(0,0,0,0.2);
+    }
+    .team-score {
+      margin-bottom: 20px;
+      background: #37474f;
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .team-score h2 {
+      margin: 0 0 10px;
+    }
+    .score-bar {
+      height: 16px;
+      background: #b0bec5;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .score-fill {
+      height: 100%;
+      width: 0;
+      background: #ff5722;
+      transition: width 0.3s ease-in-out;
+    }
+    .score-controls button, .team-buttons button {
+      margin-top: 5px;
+      margin-right: 5px;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #0288d1;
+      color: white;
+      font-weight: bold;
+    }
+    .team-buttons button.selected {
+      background-color: var(--selected-bg);
+      color: black;
+    }
+    .header h1 {
+      color: white;
+      background-color: #009688;
+      padding: 10px 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+    .controls, .score-display, .game-container {
+      width: 100%;
+      max-width: 1000px;
+    }
+    .question-text {
+      font-size: 28px;
+      font-weight: bold;
+      color: white;
+      margin: 20px auto;
+      text-align: center;
+      padding: 10px 20px;
+      background-color: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 20px;
+      margin: 8px;
+      background: var(--card-bg);
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+      cursor: pointer;
+      transition: all 0.3s ease-in-out;
+    }
+    .row:hover {
+      transform: scale(1.02);
+      background: #f1f8e9;
+    }
+    .row.revealed {
+      background: var(--highlight);
+    }
+    input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 5px;
+      border: none;
+      outline: none;
+      font-size: 16px;
+    }
+    input[type="file"] {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="main">
+    <div class="header">
+      <h1>🏏 IPL Top 5 Stats Quiz</h1>
+      <input type="file" id="fileInput" accept=".xlsx,.csv">
+    </div>
+    <div class="question-info" id="questionInfo"></div>
+    <div class="question-text" id="questionText"></div>
+    <div class="controls">
+      <button id="prevBtn">Previous</button>
+      <button id="nextBtn">Next</button>
+    </div>
+    <div class="game-container">
+      <div class="board" id="board"></div>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div style="margin-bottom: 20px;">
+      <h3>Select Team:</h3>
+      <div class="team-buttons" id="teamButtons"></div>
+    </div>
+    <div style="margin-bottom: 20px;">
+      <input type="text" id="newTeamName" placeholder="New Team Name">
+      <button onclick="addTeam()">Add Team</button>
+    </div>
+    <div id="teamScoreContainer"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const board = document.getElementById('board');
+    const questionText = document.getElementById('questionText');
+    const questionInfo = document.getElementById('questionInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const teamButtons = document.getElementById('teamButtons');
+    const teamScoreContainer = document.getElementById('teamScoreContainer');
+
+    let questions = [];
+    let currentIndex = 0;
+    let revealed = [];
+    let teamScores = {};
+    let selectedTeam = '';
+
+    function renderTeamButtons() {
+      teamButtons.innerHTML = '';
+      Object.keys(teamScores).forEach(team => {
+        const btn = document.createElement('button');
+        btn.textContent = team;
+        btn.className = selectedTeam === team ? 'selected' : '';
+        btn.onclick = () => {
+          selectedTeam = team;
+          renderTeamButtons();
+        };
+        teamButtons.appendChild(btn);
+      });
+    }
+
+    function renderTeamScores() {
+      teamScoreContainer.innerHTML = '';
+      Object.entries(teamScores).forEach(([team, score]) => {
+        const teamDiv = document.createElement('div');
+        teamDiv.className = 'team-score';
+
+        const heading = document.createElement('h2');
+        heading.innerHTML = `${team} Score: <span id="score_${team}">${score}</span>`;
+        teamDiv.appendChild(heading);
+
+        const bar = document.createElement('div');
+        bar.className = 'score-bar';
+        const fill = document.createElement('div');
+        fill.className = 'score-fill';
+        fill.id = `fill_${team}`;
+        fill.style.width = `${Math.min(100, score)}%`;
+        bar.appendChild(fill);
+        teamDiv.appendChild(bar);
+
+        const revertBtn = document.createElement('button');
+        revertBtn.textContent = 'Revert';
+        revertBtn.onclick = () => revertScore(team);
+        teamDiv.appendChild(revertBtn);
+
+        teamScoreContainer.appendChild(teamDiv);
+      });
+    }
+
+    function addTeam() {
+      const teamName = document.getElementById('newTeamName').value.trim();
+      if (teamName && !teamScores[teamName]) {
+        teamScores[teamName] = 0;
+        renderTeamButtons();
+        renderTeamScores();
+      }
+    }
+
+    function revertScore(team) {
+      const input = prompt("Enter score to revert for Team " + team + ":", "0");
+      const val = parseInt(input);
+      if (!isNaN(val) && teamScores[team] !== undefined) {
+        teamScores[team] = Math.max(0, teamScores[team] - val);
+        updateScore();
+      }
+    }
+
+    function updateScore() {
+      Object.entries(teamScores).forEach(([team, score]) => {
+        document.getElementById(`score_${team}`).textContent = score;
+        document.getElementById(`fill_${team}`).style.width = `${Math.min(100, score)}%`;
+      });
+    }
+
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = evt => {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        questions = XLSX.utils.sheet_to_json(sheet);
+        loadQuestion(0);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    prevBtn.onclick = () => {
+      if (currentIndex > 0) loadQuestion(--currentIndex);
+    };
+
+    nextBtn.onclick = () => {
+      if (currentIndex < questions.length - 1) loadQuestion(++currentIndex);
+    };
+
+    function loadQuestion(index) {
+      currentIndex = index;
+      revealed = [];
+      const q = questions[index];
+      questionInfo.textContent = `${index + 1}/${questions.length}`;
+      questionText.textContent = q.Question;
+      board.innerHTML = '';
+
+      for (let i = 1; i <= 5; i++) {
+        const row = document.createElement('div');
+        row.className = 'row';
+        const answer = q[`Option${i}`];
+        const score = parseInt(q[`Score${i}`]);
+        row.innerHTML = `<span>${i}.</span> <span class="answer-text">${answer}</span> <span>+${score}</span>`;
+        row.querySelector('.answer-text').style.display = 'none';
+
+        row.onclick = () => {
+          if (!revealed[i]) {
+            row.classList.add('revealed');
+            row.querySelector('.answer-text').style.display = 'inline';
+            revealed[i] = true;
+            if (selectedTeam && teamScores[selectedTeam] !== undefined) {
+              teamScores[selectedTeam] += score;
+              updateScore();
+            }
+          }
+        };
+        board.appendChild(row);
+      }
+    }
+  </script>
+</body>
+</html>

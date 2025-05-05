@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Matching Game</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #FFFDE7; /* Light yellow background */
+            color: #F57F17; /* Dark yellow text */
+            margin: 0;
+            padding: 20px;
+        }
+        .game-container {
+            margin-top: 20px;
+        }
+        .image-container {
+            position: relative;
+            width: 1200px; /* Double width for larger tiles */
+            height: 800px; /* Double height for larger tiles */
+            overflow: hidden;
+            border: 5px solid #FBC02D; /* Yellow border */
+            border-radius: 10px;
+            background-color: #FBC02D; /* Yellow background */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(6, 200px); /* Double column width */
+            grid-template-rows: repeat(4, 200px); /* Double row height */
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .grid-item {
+            width: 200px; /* Double width */
+            height: 200px; /* Double height */
+            position: relative;
+            border: 2px solid #FFF9C4; /* Light yellow border */
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px; /* Larger font for bigger tiles */
+            font-weight: bold;
+            color: #FFF9C4; /* Light yellow text */
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #F57F17; /* Dark yellow background */
+        }
+        .grid-item:hover {
+            background-color: #F9A825; /* Slightly lighter yellow on hover */
+        }
+        .grid-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+            display: none;
+        }
+        .grid-item.flipped {
+            background-color: transparent;
+        }
+        .grid-item.flipped img {
+            display: block;
+        }
+        .grid-item.matched {
+            border: 3px solid #8BC34A; /* Green border for matches */
+            box-shadow: inset 0 0 20px rgba(139, 195, 74, 0.5);
+        }
+        .stats {
+            margin-top: 20px;
+            font-size: 24px; /* Larger font */
+            color: #F57F17; /* Dark yellow text */
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        input[type="file"], button {
+            padding: 12px 20px;
+            font-size: 18px;
+            background-color: #FBC02D;
+            color: #FFF;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: background-color 0.3s;
+        }
+        input[type="file"]:hover, button:hover {
+            background-color: #F9A825;
+        }
+        h1 {
+            color: #F57F17;
+            font-size: 36px;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>Memory Matching Game</h1>
+    <div class="controls">
+        <input type="file" id="folderLoader" webkitdirectory directory multiple accept="image/*">
+        <button id="resetBtn" disabled>Reset Game</button>
+    </div>
+    <div class="stats">
+        <span id="moves">Moves: 0</span> | 
+        <span id="matches">Matches: 0/12</span>
+    </div>
+    <div class="game-container">
+        <div class="image-container">
+            <div class="grid-container" id="grid"></div>
+        </div>
+    </div>
+    
+    <script>
+        const gridContainer = document.getElementById("grid");
+        const folderLoader = document.getElementById("folderLoader");
+        const resetBtn = document.getElementById("resetBtn");
+        const movesDisplay = document.getElementById("moves");
+        const matchesDisplay = document.getElementById("matches");
+        
+        let images = [];
+        let gridItems = [];
+        let flippedTiles = [];
+        let matchedPairs = 0;
+        let moves = 0;
+        let gameActive = false;
+
+        folderLoader.addEventListener("change", function(event) {
+            const files = Array.from(event.target.files).filter(file => file.type.startsWith('image/'));
+            if (files.length < 12) {
+                alert("Please select at least 12 images for the game.");
+                return;
+            }
+            
+            // Take first 12 unique images
+            const selectedImages = files.slice(0, 12).map(file => URL.createObjectURL(file));
+            startGame(selectedImages);
+        });
+
+        resetBtn.addEventListener("click", function() {
+            if (images.length > 0) {
+                startGame(images.slice(0, 12)); // Use the same images for reset
+            }
+        });
+
+        function startGame(imageUrls) {
+            // Reset game state
+            images = imageUrls;
+            flippedTiles = [];
+            matchedPairs = 0;
+            moves = 0;
+            gameActive = true;
+            updateStats();
+            
+            // Create pairs and shuffle
+            const gameImages = [...imageUrls, ...imageUrls];
+            shuffle(gameImages);
+            
+            createGrid(gameImages);
+            resetBtn.disabled = false;
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createGrid(gameImages) {
+            gridContainer.innerHTML = "";
+            gridItems = [];
+            
+            for (let i = 0; i < 24; i++) {
+                const tile = document.createElement("div");
+                tile.classList.add("grid-item");
+                tile.dataset.index = i;
+                tile.dataset.imageIndex = gameImages[i];
+                tile.textContent = i + 1; // Number each tile
+                
+                const img = document.createElement("img");
+                img.src = gameImages[i];
+                tile.appendChild(img);
+                
+                tile.addEventListener("click", handleTileClick);
+                gridContainer.appendChild(tile);
+                gridItems.push(tile);
+            }
+        }
+
+        function handleTileClick() {
+            if (!gameActive) return;
+            if (flippedTiles.length >= 2) return;
+            if (this.classList.contains("flipped")) return;
+            if (this.classList.contains("matched")) return;
+            
+            this.classList.add("flipped");
+            flippedTiles.push(this);
+            
+            if (flippedTiles.length === 2) {
+                moves++;
+                updateStats();
+                checkForMatch();
+            }
+        }
+
+        function checkForMatch() {
+            const [tile1, tile2] = flippedTiles;
+            
+            if (tile1.dataset.imageIndex === tile2.dataset.imageIndex) {
+                // Match found
+                tile1.classList.add("matched");
+                tile2.classList.add("matched");
+                flippedTiles = [];
+                matchedPairs++;
+                updateStats();
+                
+                if (matchedPairs === 12) {
+                    gameActive = false;
+                    setTimeout(() => {
+                        alert(`Congratulations! You won in ${moves} moves!`);
+                    }, 500);
+                }
+            } else {
+                // No match
+                gameActive = false;
+                setTimeout(() => {
+                    tile1.classList.remove("flipped");
+                    tile2.classList.remove("flipped");
+                    flippedTiles = [];
+                    gameActive = true;
+                }, 1000);
+            }
+        }
+
+        function updateStats() {
+            movesDisplay.textContent = `Moves: ${moves}`;
+            matchesDisplay.textContent = `Matches: ${matchedPairs}/12`;
+        }
+    </script>
+</body>
+</html>

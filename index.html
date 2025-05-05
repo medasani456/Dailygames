@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Index Page</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    button {
+      display: block;
+      margin: 10px 0;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Index of Pages</h1>
+  <div id="buttons"></div>
+
+  <script>
+    // List of 	(excluding index.html)
+    const pages = [
+      "Test.html",
+      "GuessTop5_with_scoreboard.html",
+      "GuessTop5.html",
+	  "NumberGuess.html",
+	  "Summer_2025.html",
+	  "Game 4 Image Reveal game round timer_Toggles.html",
+	  "Game 3 Image Reveal game round timer.html",
+	  "Game 2 Image Reveal game.html",
+	  "Game 1 Image Reveal Game with Timer.html",
+	  "Game4 Match pairs.html"
+      // Add more HTML files here
+    ];
+
+    const container = document.getElementById("buttons");
+
+    pages.forEach(page => {
+      const btn = document.createElement("button");
+      btn.textContent = page;
+      btn.onclick = () => window.location.href = page;
+      container.appendChild(btn);
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Game Hub</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+            color: #333;
+            text-align: center;
+        }
+        .main-menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .main-menu h1 {
+            font-size: 2.5em;
+            margin-bottom: 40px;
+            color: #1976d2;
+        }
+        .game-button {
+            padding: 15px 30px;
+            font-size: 1.2em;
+            margin: 10px;
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 300px;
+        }
+        .game-button:hover {
+            background-color: #1565c0;
+            transform: translateY(-2px);
+        }
+        .game-section {
+            display: none;
+            width: 100%;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        .back-button:hover {
+            background-color: #b71c1c;
+        }
+        /* Game 1 Specific Styles */
+        #game1 { background-color: #ffebee; color: #b71c1c; }
+        #game1 .image-container { border: 5px solid #d32f2f; }
+        #game1 .grid-item { background-color: #b71c1c; border: 1px solid #d32f2f; color: white; }
+        #game1 button { background-color: #d32f2f; color: white; }
+        #game1 button:hover { background-color: #b71c1c; }
+        
+        /* Game 2 Specific Styles */
+        #game2 { background-color: #f3e5f5; color: #6a1b9a; }
+        #game2 .image-container { border: 5px solid #7b1fa2; }
+        #game2 .grid-item { background-color: #9c27b0; border: 1px solid #7b1fa2; color: white; }
+        #game2 button { background-color: #7b1fa2; color: white; }
+        #game2 button:hover { background-color: #9c27b0; }
+        
+        /* Game 3 Specific Styles */
+        #game3 { background-color: #e3f2fd; color: #0d47a1; }
+        #game3 .image-container { border: 5px solid #1565c0; }
+        #game3 .grid-item { background-color: #000000;}// border: 1px solid #0d47a1; color: white; }
+        #game3 button { background-color: #1976d2; color: white; }
+        #game3 button:hover { background-color: #1565c0; }
+        
+        /* Game 4 Specific Styles */
+        #game4 { background-color: #FFFDE7; color: #F57F17; }
+        #game4 .image-container { border: 5px solid #FBC02D; background-color: #FBC02D; }
+        #game4 .grid-item { background-color: #F57F17; border: 2px solid #FFF9C4; color: #FFF9C4; opacity: 1; }
+        #game4 button, #game4 input[type="file"] { background-color: #FBC02D; color: #FFF; }
+        #game4 button:hover, #game4 input[type="file"]:hover { background-color: #F9A825; }
+        
+        /* Game 5 Specific Styles */
+        #game5 { background-color: #ffebee; color: #b71c1c; }
+        #game5 .image-container { border: 5px solid #d32f2f; }
+        #game5 .grid-item { background-color: #b71c1c; border: 1px solid #d32f2f; color: white; }
+        #game5 button { background-color: #d32f2f; color: white; }
+        #game5 button:hover { background-color: #b71c1c; }
+    </style>
+</head>
+<body>
+    <!-- Main Menu -->
+    <div id="mainMenu" class="main-menu">
+        <h1>Multi-Game Hub</h1>
+        <button class="game-button" onclick="showGame('game1')">Basic Image Reveal</button>
+        <button class="game-button" onclick="showGame('game2')">Enhanced Image Reveal</button>
+        <button class="game-button" onclick="showGame('game3')">Advanced Image Reveal</button>
+        <button class="game-button" onclick="showGame('game4')">Memory Matching Game</button>
+        <button class="game-button" onclick="showGame('game5')">Timed Image Reveal</button>
+    </div>
+
+    <!-- Back Button -->
+    <button class="back-button" onclick="backToMenu()" style="display: none;">Back to Menu</button>
+
+    <!-- Game 1: Basic Image Reveal -->
+    <div id="game1" class="game-section">
+        <h1>Basic Image Reveal Game</h1>
+        <input type="file" id="folderLoader1" webkitdirectory directory multiple accept="image/*">
+        <div class="image-container" style="position: relative; width: 600px; height: 400px; overflow: hidden; border-radius: 10px; margin: 0 auto;">
+            <img id="gameImage1" src="https://via.placeholder.com/1920x1080" alt="Hidden Image" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            <div class="grid-container" id="grid1" style="display: grid; grid-template-columns: repeat(6, 100px); grid-template-rows: repeat(4, 100px); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+        </div>
+        <div class="navigation" style="margin-top: 20px;">
+            <button id="prevBtn1">Previous</button>
+            <span id="imageCounter1">1/1</span>
+            <button id="nextBtn1">Next</button>
+        </div>
+        <div class="number-buttons" id="buttons1" style="margin-top: 20px;"></div>
+        <button id="toggleAll1">Toggle All</button>
+        <div id="rowButtons1" style="margin-top: 10px;"></div>
+        <div id="colButtons1" style="margin-top: 10px;"></div>
+    </div>
+
+    <!-- Game 2: Enhanced Image Reveal -->
+    <div id="game2" class="game-section">
+        <h1>Enhanced Image Reveal Game</h1>
+        <div class="image-nav" style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+            <button id="prevBtn2" disabled>← Previous</button>
+            <span id="imageCounter2">No images loaded</span>
+            <button id="nextBtn2" disabled>Next →</button>
+        </div>
+        <input type="file" id="folderLoader2" webkitdirectory directory multiple accept="image/*">
+        <div class="image-container" style="position: relative; width: 600px; height: 400px; overflow: hidden; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); margin: 0 auto;">
+            <img id="gameImage2" src="https://via.placeholder.com/600x400?text=Load+images+to+start" alt="Hidden Image" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            <div class="grid-container" id="grid2" style="display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(4, 1fr); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+        </div>
+        <div class="progress" style="margin-top: 10px; font-weight: bold;">Tiles revealed: <span id="revealedCount2">0</span>/24</div>
+        <div class="controls" style="margin-top: 20px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: 600px; margin-left: auto; margin-right: auto;">
+            <div>
+                <label for="timerInterval2">Reveal speed (ms):</label>
+                <input type="number" id="timerInterval2" min="100" value="1000" style="padding: 8px 12px; border: 1px solid #ba68c8; border-radius: 4px; background-color: #f3e5f5;">
+            </div>
+            <button id="startTimer2">Start Revealing</button>
+            <button id="stopTimer2" disabled>Stop</button>
+            <button id="resetGame2">Reset Tiles</button>
+        </div>
+    </div>
+
+    <!-- Game 3: Advanced Image Reveal -->
+    <div id="game3" class="game-section">
+        <div class="game-container" style="max-width: 800px; width: 100%; margin: 0 auto;">
+            <h1>Advanced Image Reveal Game</h1>
+            <div class="file-input-container" style="margin-bottom: 20px;">
+                <input type="file" id="folderLoader3" webkitdirectory directory multiple accept="image/*">
+            </div>
+            <div class="image-nav" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;">
+                <button id="prevBtn3" disabled>← Previous</button>
+                <span id="imageCounter3">No images loaded</span>
+                <button id="nextBtn3" disabled>Next →</button>
+            </div>
+            <div class="image-container" style="position: relative; width: 100%; height: 400px; overflow: hidden; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); margin-bottom: 20px;">
+                <img id="gameImage3" src="https://via.placeholder.com/800x400?text=Load+images+to+start" alt="Hidden Image" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+                <div class="grid-container" id="grid3" style="display: grid; grid-template-columns: repeat(6, 1fr); grid-template-rows: repeat(4, 1fr); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            </div>
+            <div class="progress" style="font-weight: bold; margin: 10px 0; font-size: 1.1em;">Tiles revealed: <span id="revealedCount3">0</span>/48 | Showing: <span id="showingCount3">0</span></div>
+            <div class="controls" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; width: 100%;">
+                <div class="control-group" style="display: flex; flex-direction: column; align-items: center; padding: 10px; background-color: #bbdefb; border-radius: 8px;">
+                    <label for="revealCount3">Tiles to reveal:</label>
+                    <input type="number" id="revealCount3" min="2" max="40" value="2" style="padding: 8px 12px; border: 1px solid #64b5f6; border-radius: 4px; background-color: #e3f2fd; width: 100%; max-width: 150px; text-align: center;">
+                </div>
+                <div class="control-group" style="display: flex; flex-direction: column; align-items: center; padding: 10px; background-color: #bbdefb; border-radius: 8px;">
+                    <label for="maxVisible3">Max visible tiles:</label>
+                    <input type="number" id="maxVisible3" min="5" max="48" value="24" style="padding: 8px 12px; border: 1px solid #64b5f6; border-radius: 4px; background-color: #e3f2fd; width: 100%; max-width: 150px; text-align: center;">
+                </div>
+                <div class="control-group" style="display: flex; flex-direction: column; align-items: center; padding: 10px; background-color: #bbdefb; border-radius: 8px;">
+                    <label for="timerInterval3">Speed (ms):</label>
+                    <input type="number" id="timerInterval3" min="100" value="1000" style="padding: 8px 12px; border: 1px solid #64b5f6; border-radius: 4px; background-color: #e3f2fd; width: 100%; max-width: 150px; text-align: center;">
+                </div>
+                <div class="control-group" style="display: flex; flex-direction: column; align-items: center; padding: 10px; background-color: #bbdefb; border-radius: 8px;">
+                    <button id="startTimer3">Start Revealing</button>
+                    <button id="stopTimer3" disabled>Stop</button>
+                    <button id="resetGame3">Reset Tiles</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game 4: Memory Matching Game -->
+    <div id="game4" class="game-section">
+        <h1>Memory Matching Game</h1>
+        <div class="controls" style="margin-bottom: 20px;">
+            <input type="file" id="folderLoader4" webkitdirectory directory multiple accept="image/*">
+            <button id="resetBtn4" disabled>Reset Game</button>
+        </div>
+        <div class="stats" style="margin-top: 20px; font-size: 24px;">
+            <span id="moves4">Moves: 0</span> | 
+            <span id="matches4">Matches: 0/12</span>
+        </div>
+        <div class="game-container" style="margin-top: 20px;">
+            <div class="image-container" style="position: relative; width: 1200px; height: 800px; overflow: hidden; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); margin: 0 auto;">
+                <div class="grid-container" id="grid4" style="display: grid; grid-template-columns: repeat(6, 200px); grid-template-rows: repeat(4, 200px); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game 5: Timed Image Reveal -->
+    <div id="game5" class="game-section">
+        <h1>Timed Image Reveal Game</h1>
+        <input type="file" id="folderLoader5" webkitdirectory directory multiple accept="image/*">
+        <div class="image-container" style="position: relative; width: 600px; height: 400px; overflow: hidden; border-radius: 10px; margin: 0 auto;">
+            <img id="gameImage5" src="https://via.placeholder.com/1920x1080" alt="Hidden Image" style="width: 100%; height: 100%; object-fit: cover; display: block;">
+            <div class="grid-container" id="grid5" style="display: grid; grid-template-columns: repeat(6, 100px); grid-template-rows: repeat(4, 100px); position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></div>
+        </div>
+        <div class="navigation" style="margin-top: 20px;">
+            <button id="prevBtn5">Previous</button>
+            <span id="imageCounter5">1/1</span>
+            <button id="nextBtn5">Next</button>
+        </div>
+        <div class="number-buttons" id="buttons5" style="margin-top: 20px;"></div>
+        <button id="toggleAll5">Toggle All</button>
+        <div id="rowButtons5" style="margin-top: 10px;"></div>
+        <div id="colButtons5" style="margin-top: 10px;"></div>
+        <div class="timer-controls" style="margin-top: 20px;">
+            <input type="number" id="timerInterval5" placeholder="Interval (seconds)" min="1" value="2" style="padding: 10px; font-size: 16px; width: 100px; border: 1px solid #d32f2f; border-radius: 5px;">
+            <button id="startTimer5">Start Timer</button>
+            <button id="stopTimer5">Stop Timer</button>
+        </div>
+    </div>
+
+    <script>
+        // Main Menu Navigation
+        function showGame(gameId) {
+            document.querySelectorAll('.game-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById(gameId).style.display = 'block';
+            document.querySelector('.back-button').style.display = 'block';
+        }
+
+        function backToMenu() {
+            document.querySelectorAll('.game-section').forEach(section => {
+                section.style.display = 'none';
+            });
+            document.getElementById('mainMenu').style.display = 'flex';
+            document.querySelector('.back-button').style.display = 'none';
+        }
+
+        // Game 1: Basic Image Reveal
+        (function() {
+            const gridContainer1 = document.getElementById("grid1");
+            const buttonsContainer1 = document.getElementById("buttons1");
+            const folderLoader1 = document.getElementById("folderLoader1");
+            const gameImage1 = document.getElementById("gameImage1");
+            const prevBtn1 = document.getElementById("prevBtn1");
+            const nextBtn1 = document.getElementById("nextBtn1");
+            const imageCounter1 = document.getElementById("imageCounter1");
+            const toggleAllBtn1 = document.getElementById("toggleAll1");
+            const rowButtons1 = document.getElementById("rowButtons1");
+            const colButtons1 = document.getElementById("colButtons1");
+            
+            let images1 = [];
+            let currentIndex1 = 0;
+            let gridItems1 = [];
+
+            folderLoader1.addEventListener("change", function(event) {
+                images1 = Array.from(event.target.files).map(file => URL.createObjectURL(file));
+                if (images1.length > 0) {
+                    currentIndex1 = 0;
+                    updateImage1();
+                }
+            });
+
+            prevBtn1.addEventListener("click", function() {
+                if (currentIndex1 > 0) {
+                    currentIndex1--;
+                    updateImage1();
+                }
+            });
+
+            nextBtn1.addEventListener("click", function() {
+                if (currentIndex1 < images1.length - 1) {
+                    currentIndex1++;
+                    updateImage1();
+                }
+            });
+
+            function updateImage1() {
+                gameImage1.src = images1[currentIndex1];
+                imageCounter1.textContent = `${currentIndex1 + 1}/${images1.length}`;
+            }
+
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 6; col++) {
+                    let index = row * 6 + col;
+                    let tile = document.createElement("div");
+                    tile.classList.add("grid-item");
+                    tile.setAttribute("data-index", index);
+                    tile.textContent = index + 1;
+                    tile.style.cssText = `width: 100px; height: 100px; position: absolute; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; top: ${row * 100}px; left: ${col * 100}px;`;
+                    gridContainer1.appendChild(tile);
+                    gridItems1.push(tile);
+
+                    let button = document.createElement("button");
+                    button.textContent = index + 1;
+                    button.onclick = () => {
+                        tile.style.display = tile.style.display === "none" ? "flex" : "none";
+                    };
+                    buttonsContainer1.appendChild(button);
+                }
+            }
+
+            toggleAllBtn1.onclick = () => {
+                gridItems1.forEach(tile => {
+                    tile.style.display = tile.style.display === "none" ? "flex" : "none";
+                });
+            };
+
+            for (let row = 0; row < 4; row++) {
+                let rowBtn = document.createElement("button");
+                rowBtn.textContent = `Toggle Row ${row + 1}`;
+                rowBtn.onclick = () => {
+                    for (let col = 0; col < 6; col++) {
+                        let index = row * 6 + col;
+                        gridItems1[index].style.display = gridItems1[index].style.display === "none" ? "flex" : "none";
+                    }
+                };
+                rowButtons1.appendChild(rowBtn);
+            }
+
+            for (let col = 0; col < 6; col++) {
+                let colBtn = document.createElement("button");
+                colBtn.textContent = `Toggle Col ${col + 1}`;
+                colBtn.onclick = () => {
+                    for (let row = 0; row < 4; row++) {
+                        let index = row * 6 + col;
+                        gridItems1[index].style.display = gridItems1[index].style.display === "none" ? "flex" : "none";
+                    }
+                };
+                colButtons1.appendChild(colBtn);
+            }
+        })();
+
+        // Game 2: Enhanced Image Reveal
+        (function() {
+            const gridContainer2 = document.getElementById("grid2");
+            const resetBtn2 = document.getElementById("resetGame2");
+            const startTimerBtn2 = document.getElementById("startTimer2");
+            const stopTimerBtn2 = document.getElementById("stopTimer2");
+            const prevBtn2 = document.getElementById("prevBtn2");
+            const nextBtn2 = document.getElementById("nextBtn2");
+            const timerIntervalInput2 = document.getElementById("timerInterval2");
+            const folderLoader2 = document.getElementById("folderLoader2");
+            const gameImage2 = document.getElementById("gameImage2");
+            const imageCounter2 = document.getElementById("imageCounter2");
+            const revealedCount2 = document.getElementById("revealedCount2");
+
+            let gridItems2 = [];
+            let images2 = [];
+            let currentImageIndex2 = 0;
+            let timer2 = null;
+            let hiddenTiles2 = [];
+
+            function createGrid2() {
+                gridContainer2.innerHTML = "";
+                gridItems2 = [];
+                
+                for (let i = 0; i < 24; i++) {
+                    const tile = document.createElement("div");
+                    tile.className = "grid-item";
+                    tile.textContent = i + 1;
+                    tile.dataset.index = i;
+                    tile.style.cssText = "display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; transition: all 0.3s ease; cursor: pointer;";
+                    tile.addEventListener("click", () => {
+                        tile.classList.add("hidden");
+                        tile.style.opacity = "0";
+                        tile.style.pointerEvents = "none";
+                        updateHiddenTiles2();
+                        updateRevealedCount2();
+                    });
+                    gridContainer2.appendChild(tile);
+                    gridItems2.push(tile);
+                }
+                
+                updateHiddenTiles2();
+                updateRevealedCount2();
+            }
+
+            function updateHiddenTiles2() {
+                hiddenTiles2 = gridItems2.filter(tile => !tile.classList.contains("hidden"));
+            }
+
+            function updateRevealedCount2() {
+                revealedCount2.textContent = 24 - hiddenTiles2.length;
+            }
+
+            function resetGame2() {
+                gridItems2.forEach(tile => {
+                    tile.classList.remove("hidden");
+                    tile.style.opacity = "1";
+                    tile.style.pointerEvents = "auto";
+                });
+                updateHiddenTiles2();
+                updateRevealedCount2();
+            }
+
+            function revealRandomTile2() {
+                if (hiddenTiles2.length === 0) {
+                    stopTimer2();
+                    return;
+                }
+                
+                const randomIndex = Math.floor(Math.random() * hiddenTiles2.length);
+                hiddenTiles2[randomIndex].classList.add("hidden");
+                hiddenTiles2[randomIndex].style.opacity = "0";
+                hiddenTiles2[randomIndex].style.pointerEvents = "none";
+                updateHiddenTiles2();
+                updateRevealedCount2();
+            }
+
+            function startTimer2() {
+                if (timer2) return;
+                
+                const interval = Math.max(100, parseInt(timerIntervalInput2.value) || 1000);
+                
+                startTimerBtn2.disabled = true;
+                stopTimerBtn2.disabled = false;
+                
+                revealRandomTile2();
+                
+                timer2 = setInterval(() => {
+                    revealRandomTile2();
+                }, interval);
+            }
+
+            function stopTimer2() {
+                if (!timer2) return;
+                
+                clearInterval(timer2);
+                timer2 = null;
+                
+                startTimerBtn2.disabled = false;
+                stopTimerBtn2.disabled = true;
+            }
+
+            function loadImages2(files) {
+                images2 = Array.from(files).filter(file => file.type.startsWith("image/"));
+                
+                if (images2.length > 0) {
+                    currentImageIndex2 = 0;
+                    updateImage2();
+                    prevBtn2.disabled = false;
+                    nextBtn2.disabled = false;
+                } else {
+                    imageCounter2.textContent = "No valid images found";
+                    prevBtn2.disabled = true;
+                    nextBtn2.disabled = true;
+                }
+            }
+
+            function updateImage2() {
+                if (images2.length === 0) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    gameImage2.src = e.target.result;
+                    imageCounter2.textContent = `${currentImageIndex2 + 1}/${images2.length}`;
+                    resetGame2();
+                };
+                reader.readAsDataURL(images2[currentImageIndex2]);
+            }
+
+            function prevImage2() {
+                if (images2.length === 0) return;
+                
+                currentImageIndex2 = (currentImageIndex2 - 1 + images2.length) % images2.length;
+                updateImage2();
+            }
+
+            function nextImage2() {
+                if (images2.length === 0) return;
+                
+                currentImageIndex2 = (currentImageIndex2 + 1) % images2.length;
+                updateImage2();
+            }
+
+            resetBtn2.addEventListener("click", resetGame2);
+            startTimerBtn2.addEventListener("click", startTimer2);
+            stopTimerBtn2.addEventListener("click", stopTimer2);
+            prevBtn2.addEventListener("click", prevImage2);
+            nextBtn2.addEventListener("click", nextImage2);
+            folderLoader2.addEventListener("change", (e) => {
+                loadImages2(e.target.files);
+            });
+
+            createGrid2();
+        })();
+
+        // Game 3: Advanced Image Reveal
+        (function() {
+			const plannedsize = 48
+            const gridContainer3 = document.getElementById("grid3");
+            const resetBtn3 = document.getElementById("resetGame3");
+            const startTimerBtn3 = document.getElementById("startTimer3");
+            const stopTimerBtn3 = document.getElementById("stopTimer3");
+            const prevBtn3 = document.getElementById("prevBtn3");
+            const nextBtn3 = document.getElementById("nextBtn3");
+            const timerIntervalInput3 = document.getElementById("timerInterval3");
+            const revealCountInput3 = document.getElementById("revealCount3");
+            const maxVisibleInput3 = document.getElementById("maxVisible3");
+            const folderLoader3 = document.getElementById("folderLoader3");
+            const gameImage3 = document.getElementById("gameImage3");
+            const imageCounter3 = document.getElementById("imageCounter3");
+            const revealedCount3 = document.getElementById("revealedCount3");
+            const showingCount3 = document.getElementById("showingCount3");
+
+            let gridItems3 = [];
+            let images3 = [];
+            let currentImageIndex3 = 0;
+            let timer3 = null;
+            let hiddenTiles3 = [];
+            let visibleTiles3 = [];
+
+            function createGrid3() {
+                gridContainer3.innerHTML = "";
+                gridItems3 = [];
+                visibleTiles3 = [];
+                
+                for (let i = 0; i < plannedsize; i++) {
+                    const tile = document.createElement("div");
+                    tile.className = "grid-item";
+                    //tile.textContent = i + 1;
+                    tile.dataset.index = i;
+                    tile.style.cssText = "display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; transition: all 0.3s ease; cursor: pointer;";
+                    tile.addEventListener("click", () => {
+                        if (tile.classList.contains("hidden")) {
+                            showTile3(tile);
+                        } else {
+                            hideTile3(tile);
+                        }
+                        updateCounts3();
+                    });
+                    gridContainer3.appendChild(tile);
+                    gridItems3.push(tile);
+                    visibleTiles3.push(tile);
+                }
+                
+                updateCounts3();
+            }
+
+            function showTile3(tile) {
+                tile.classList.remove("hidden");
+                tile.style.opacity = "1";
+                tile.style.pointerEvents = "auto";
+                visibleTiles3.push(tile);
+                hiddenTiles3 = hiddenTiles3.filter(t => t !== tile);
+            }
+
+            function hideTile3(tile) {
+                tile.classList.add("hidden");
+                tile.style.opacity = "0";
+                tile.style.pointerEvents = "none";
+                hiddenTiles3.push(tile);
+                visibleTiles3 = visibleTiles3.filter(t => t !== tile);
+            }
+
+            function updateCounts3() {
+                revealedCount3.textContent = hiddenTiles3.length;
+                showingCount3.textContent = visibleTiles3.length;
+            }
+
+            function resetGame3() {
+                gridItems3.forEach(tile => {
+                    tile.classList.remove("hidden");
+                    tile.style.opacity = "1";
+                    tile.style.pointerEvents = "auto";
+                });
+                hiddenTiles3 = [];
+                visibleTiles3 = [...gridItems3];
+                updateCounts3();
+            }
+
+            function revealRandomTiles3() {
+                const tilesToReveal = Math.min(
+                    parseInt(revealCountInput3.value) || 1,
+                    plannedsize - hiddenTiles3.length
+                );
+                
+                const maxVisible = parseInt(maxVisibleInput3.value) || plannedsize;
+                const needToHide = Math.max(0, (visibleTiles3.length + tilesToReveal) - maxVisible);
+                
+                if (needToHide > 0) {
+                    const tilesToHide = visibleTiles3
+                        .sort(() => 0.5 - Math.random())
+                        .slice(0, needToHide);
+                    
+                    tilesToHide.forEach(tile => hideTile3(tile));
+                }
+                
+                if (tilesToReveal > 0) {
+                    const tilesToShow = gridItems3
+                        .filter(tile => tile.classList.contains("hidden"))
+                        .sort(() => 0.5 - Math.random())
+                        .slice(0, tilesToReveal);
+                    
+                    tilesToShow.forEach(tile => showTile3(tile));
+                }
+                
+                updateCounts3();
+                
+                if (hiddenTiles3.length === plannedsize) {
+                    stopTimer3();
+                }
+            }
+
+            function startTimer3() {
+                if (timer3) return;
+                
+                const interval = Math.max(100, parseInt(timerIntervalInput3.value) || 1000);
+                
+                startTimerBtn3.disabled = true;
+                stopTimerBtn3.disabled = false;
+                
+                revealRandomTiles3();
+                
+                timer3 = setInterval(() => {
+                    revealRandomTiles3();
+                }, interval);
+            }
+
+            function stopTimer3() {
+                if (!timer3) return;
+                
+                clearInterval(timer3);
+                timer3 = null;
+                
+                startTimerBtn3.disabled = false;
+                stopTimerBtn3.disabled = true;
+            }
+
+            function loadImages3(files) {
+                images3 = Array.from(files).filter(file => file.type.startsWith("image/"));
+                
+                if (images3.length > 0) {
+                    currentImageIndex3 = 0;
+                    updateImage3();
+                    prevBtn3.disabled = false;
+                    nextBtn3.disabled = false;
+                } else {
+                    imageCounter3.textContent = "No valid images found";
+                    prevBtn3.disabled = true;
+                    nextBtn3.disabled = true;
+                }
+            }
+
+            function updateImage3() {
+                if (images3.length === 0) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    gameImage3.src = e.target.result;
+                    imageCounter3.textContent = `${currentImageIndex3 + 1}/${images3.length}`;
+                    resetGame3();
+                };
+                reader.readAsDataURL(images3[currentImageIndex3]);
+            }
+
+            function prevImage3() {
+                if (images3.length === 0) return;
+                
+                currentImageIndex3 = (currentImageIndex3 - 1 + images3.length) % images3.length;
+                updateImage3();
+            }
+
+            function nextImage3() {
+                if (images3.length === 0) return;
+                
+                currentImageIndex3 = (currentImageIndex3 + 1) % images3.length;
+                updateImage3();
+            }
+
+            function validateInputs3() {
+                const revealCount = parseInt(revealCountInput3.value) || 1;
+                const maxVisible = parseInt(maxVisibleInput3.value) || plannedsizeplannedsizeplannedsize;
+                
+                if (revealCount < 1) revealCountInput3.value = 1;
+                if (revealCount > plannedsize) revealCountInput3.value = plannedsizeplannedsize;
+                if (maxVisible < 1) maxVisibleInput3.value = 1;
+                if (maxVisible > plannedsize) maxVisibleInput3.value = plannedsize;
+            }
+
+            resetBtn3.addEventListener("click", resetGame3);
+            startTimerBtn3.addEventListener("click", startTimer3);
+            stopTimerBtn3.addEventListener("click", stopTimer3);
+            prevBtn3.addEventListener("click", prevImage3);
+            nextBtn3.addEventListener("click", nextImage3);
+            folderLoader3.addEventListener("change", (e) => {
+                loadImages3(e.target.files);
+            });
+            revealCountInput3.addEventListener("change", validateInputs3);
+            maxVisibleInput3.addEventListener("change", validateInputs3);
+            timerIntervalInput3.addEventListener("change", validateInputs3);
+
+            createGrid3();
+        })();
+
+        // Game 4: Memory Matching Game
+        (function() {
+            const gridContainer4 = document.getElementById("grid4");
+            const folderLoader4 = document.getElementById("folderLoader4");
+            const resetBtn4 = document.getElementById("resetBtn4");
+            const movesDisplay4 = document.getElementById("moves4");
+            const matchesDisplay4 = document.getElementById("matches4");
+            
+            let images4 = [];
+            let gridItems4 = [];
+            let flippedTiles4 = [];
+            let matchedPairs4 = 0;
+            let moves4 = 0;
+            let gameActive4 = false;
+
+            folderLoader4.addEventListener("change", function(event) {
+                const files = Array.from(event.target.files).filter(file => file.type.startsWith('image/'));
+                if (files.length < 12) {
+                    alert("Please select at least 12 images for the game.");
+                    return;
+                }
+                
+                const selectedImages = files.slice(0, 12).map(file => URL.createObjectURL(file));
+                startGame4(selectedImages);
+            });
+
+            resetBtn4.addEventListener("click", function() {
+                if (images4.length > 0) {
+                    startGame4(images4.slice(0, 12));
+                }
+            });
+
+            function startGame4(imageUrls) {
+                images4 = imageUrls;
+                flippedTiles4 = [];
+                matchedPairs4 = 0;
+                moves4 = 0;
+                gameActive4 = true;
+                updateStats4();
+                
+                const gameImages = [...imageUrls, ...imageUrls];
+                shuffle4(gameImages);
+                
+                createGrid4(gameImages);
+                resetBtn4.disabled = false;
+            }
+
+            function shuffle4(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    let j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+                return array;
+            }
+
+            function createGrid4(gameImages) {
+                gridContainer4.innerHTML = "";
+                gridItems4 = [];
+                
+                for (let i = 0; i < 24; i++) {
+                    const tile = document.createElement("div");
+                    tile.classList.add("grid-item");
+                    tile.dataset.index = i;
+                    tile.dataset.imageIndex = gameImages[i];
+                    tile.textContent = i + 1;
+                    tile.style.cssText = "width: 200px; height: 200px; position: relative; box-sizing: border-box; display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; opacity: 1;";
+                    
+                    const img = document.createElement("img");
+                    img.src = gameImages[i];
+                    img.style.cssText = "width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; display: none;";
+                    tile.appendChild(img);
+                    
+                    tile.addEventListener("click", handleTileClick4);
+                    gridContainer4.appendChild(tile);
+                    gridItems4.push(tile);
+                }
+            }
+
+            function handleTileClick4() {
+                if (!gameActive4) return;
+                if (flippedTiles4.length >= 2) return;
+                if (this.classList.contains("flipped")) return;
+                if (this.classList.contains("matched")) return;
+                
+                this.classList.add("flipped");
+                this.querySelector("img").style.display = "block";
+                this.style.backgroundColor = "transparent";
+                flippedTiles4.push(this);
+                
+                if (flippedTiles4.length === 2) {
+                    moves4++;
+                    updateStats4();
+                    checkForMatch4();
+                }
+            }
+
+            function checkForMatch4() {
+                const [tile1, tile2] = flippedTiles4;
+                
+                if (tile1.dataset.imageIndex === tile2.dataset.imageIndex) {
+                    tile1.classList.add("matched");
+                    tile2.classList.add("matched");
+                    tile1.style.border = "3px solid #8BC34A";
+                    tile1.style.boxShadow = "inset 0 0 20px rgba(139, 195, 74, 0.5)";
+                    tile2.style.border = "3px solid #8BC34A";
+                    tile2.style.boxShadow = "inset 0 0 20px rgba(139, 195, 74, 0.5)";
+                    flippedTiles4 = [];
+                    matchedPairs4++;
+                    updateStats4();
+                    
+                    if (matchedPairs4 === 12) {
+                        gameActive4 = false;
+                        setTimeout(() => {
+                            alert(`Congratulations! You won in ${moves4} moves!`);
+                        }, 500);
+                    }
+                } else {
+                    gameActive4 = false;
+                    setTimeout(() => {
+                        tile1.classList.remove("flipped");
+                        tile2.classList.remove("flipped");
+                        tile1.querySelector("img").style.display = "none";
+                        tile2.querySelector("img").style.display = "none";
+                        tile1.style.backgroundColor = "#F57F17";
+                        tile2.style.backgroundColor = "#F57F17";
+                        flippedTiles4 = [];
+                        gameActive4 = true;
+                    }, 1000);
+                }
+            }
+
+            function updateStats4() {
+                movesDisplay4.textContent = `Moves: ${moves4}`;
+                matchesDisplay4.textContent = `Matches: ${matchedPairs4}/12`;
+            }
+        })();
+
+        // Game 5: Timed Image Reveal
+        (function() {
+            const gridContainer5 = document.getElementById("grid5");
+            const buttonsContainer5 = document.getElementById("buttons5");
+            const folderLoader5 = document.getElementById("folderLoader5");
+            const gameImage5 = document.getElementById("gameImage5");
+            const prevBtn5 = document.getElementById("prevBtn5");
+            const nextBtn5 = document.getElementById("nextBtn5");
+            const imageCounter5 = document.getElementById("imageCounter5");
+            const toggleAllBtn5 = document.getElementById("toggleAll5");
+            const rowButtons5 = document.getElementById("rowButtons5");
+            const colButtons5 = document.getElementById("colButtons5");
+            const timerIntervalInput5 = document.getElementById("timerInterval5");
+            const startTimerBtn5 = document.getElementById("startTimer5");
+            const stopTimerBtn5 = document.getElementById("stopTimer5");
+            
+            let images5 = [];
+            let currentIndex5 = 0;
+            let gridItems5 = [];
+            let timer5 = null;
+
+            folderLoader5.addEventListener("change", function(event) {
+                images5 = Array.from(event.target.files).map(file => URL.createObjectURL(file));
+                if (images5.length > 0) {
+                    currentIndex5 = 0;
+                    updateImage5();
+                }
+            });
+
+            prevBtn5.addEventListener("click", function() {
+                if (currentIndex5 > 0) {
+                    currentIndex5--;
+                    updateImage5();
+                }
+            });
+
+            nextBtn5.addEventListener("click", function() {
+                if (currentIndex5 < images5.length - 1) {
+                    currentIndex5++;
+                    updateImage5();
+                }
+            });
+
+            function updateImage5() {
+                gameImage5.src = images5[currentIndex5];
+                imageCounter5.textContent = `${currentIndex5 + 1}/${images5.length}`;
+            }
+
+            for (let row = 0; row < 4; row++) {
+                for (let col = 0; col < 6; col++) {
+                    let index = row * 6 + col;
+                    let tile = document.createElement("div");
+                    tile.classList.add("grid-item");
+                    tile.setAttribute("data-index", index);
+                    tile.textContent = index + 1;
+                    tile.style.cssText = `width: 100px; height: 100px; position: absolute; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; top: ${row * 100}px; left: ${col * 100}px;`;
+                    gridContainer5.appendChild(tile);
+                    gridItems5.push(tile);
+
+                    let button = document.createElement("button");
+                    button.textContent = index + 1;
+                    button.onclick = () => {
+                        tile.style.display = tile.style.display === "none" ? "flex" : "none";
+                    };
+                    buttonsContainer5.appendChild(button);
+                }
+            }
+
+            toggleAllBtn5.onclick = () => {
+                gridItems5.forEach(tile => {
+                    tile.style.display = tile.style.display === "none" ? "flex" : "none";
+                });
+            };
+
+            for (let row = 0; row < 4; row++) {
+                let rowBtn = document.createElement("button");
+                rowBtn.textContent = `Toggle Row ${row + 1}`;
+                rowBtn.onclick = () => {
+                    for (let col = 0; col < 6; col++) {
+                        let index = row * 6 + col;
+                        gridItems5[index].style.display = gridItems5[index].style.display === "none" ? "flex" : "none";
+                    }
+                };
+                rowButtons5.appendChild(rowBtn);
+            }
+
+            for (let col = 0; col < 6; col++) {
+                let colBtn = document.createElement("button");
+                colBtn.textContent = `Toggle Col ${col + 1}`;
+                colBtn.onclick = () => {
+                    for (let row = 0; row < 4; row++) {
+                        let index = row * 6 + col;
+                        gridItems5[index].style.display = gridItems5[index].style.display === "none" ? "flex" : "none";
+                    }
+                };
+                colButtons5.appendChild(colBtn);
+            }
+
+            startTimerBtn5.addEventListener("click", () => {
+                const interval = parseInt(timerIntervalInput5.value) * 1000;
+                if (interval > 0 && !timer5) {
+                    timer5 = setInterval(() => {
+                        const randomIndex = Math.floor(Math.random() * gridItems5.length);
+                        gridItems5[randomIndex].style.display = gridItems5[randomIndex].style.display === "none" ? "flex" : "none";
+                    }, interval);
+                }
+            });
+
+            stopTimerBtn5.addEventListener("click", () => {
+                if (timer5) {
+                    clearInterval(timer5);
+                    timer5 = null;
+                }
+            });
+        })();
+    </script>
+</body>
+</html>

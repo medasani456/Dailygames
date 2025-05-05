@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Reveal Game</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f3e5f5;
+            color: #6a1b9a;
+        }
+        .image-container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            overflow: hidden;
+            border: 5px solid #7b1fa2;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .grid-item {
+            background-color: #9c27b0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            border: 1px solid #7b1fa2;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .grid-item:hover {
+            background-color: #ab47bc;
+        }
+        .grid-item.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            max-width: 600px;
+        }
+        button {
+            padding: 10px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #7b1fa2;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+            min-width: 100px;
+        }
+        button:hover {
+            background-color: #9c27b0;
+        }
+        button:disabled {
+            background-color: #b39ddb;
+            cursor: not-allowed;
+        }
+        input, select {
+            padding: 8px 12px;
+            border: 1px solid #ba68c8;
+            border-radius: 4px;
+            background-color: #f3e5f5;
+        }
+        .image-nav {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .progress {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #4a148c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Image Reveal Game</h1>
+    
+    <div class="image-nav">
+        <button id="prevBtn" disabled>← Previous</button>
+        <span id="imageCounter">No images loaded</span>
+        <button id="nextBtn" disabled>Next →</button>
+    </div>
+    
+    <input type="file" id="folderLoader" webkitdirectory directory multiple accept="image/*">
+    
+    <div class="image-container">
+        <img id="gameImage" src="https://via.placeholder.com/600x400?text=Load+images+to+start" alt="Hidden Image">
+        <div class="grid-container" id="grid"></div>
+    </div>
+    
+    <div class="progress">Tiles revealed: <span id="revealedCount">0</span>/24</div>
+    
+    <div class="controls">
+        <div>
+            <label for="timerInterval">Reveal speed (ms):</label>
+            <input type="number" id="timerInterval" min="100" value="1000">
+        </div>
+        <button id="startTimer">Start Revealing</button>
+        <button id="stopTimer" disabled>Stop</button>
+        <button id="resetGame">Reset Tiles</button>
+    </div>
+
+    <script>
+        // DOM elements
+        const gridContainer = document.getElementById("grid");
+        const resetBtn = document.getElementById("resetGame");
+        const startTimerBtn = document.getElementById("startTimer");
+        const stopTimerBtn = document.getElementById("stopTimer");
+        const prevBtn = document.getElementById("prevBtn");
+        const nextBtn = document.getElementById("nextBtn");
+        const timerIntervalInput = document.getElementById("timerInterval");
+        const folderLoader = document.getElementById("folderLoader");
+        const gameImage = document.getElementById("gameImage");
+        const imageCounter = document.getElementById("imageCounter");
+        const revealedCount = document.getElementById("revealedCount");
+
+        // Game state
+        let gridItems = [];
+        let images = [];
+        let currentImageIndex = 0;
+        let timer = null;
+        let hiddenTiles = [];
+
+        // Initialize the grid
+        function createGrid() {
+            gridContainer.innerHTML = "";
+            gridItems = [];
+            
+            for (let i = 0; i < 24; i++) {
+                const tile = document.createElement("div");
+                tile.className = "grid-item";
+                tile.textContent = i + 1;
+                tile.dataset.index = i;
+                
+                tile.addEventListener("click", () => {
+                    tile.classList.add("hidden");
+                    updateHiddenTiles();
+                    updateRevealedCount();
+                });
+                
+                gridContainer.appendChild(tile);
+                gridItems.push(tile);
+            }
+            
+            updateHiddenTiles();
+            updateRevealedCount();
+        }
+
+        // Update list of hidden tiles
+        function updateHiddenTiles() {
+            hiddenTiles = gridItems.filter(tile => !tile.classList.contains("hidden"));
+        }
+
+        // Update revealed tiles counter
+        function updateRevealedCount() {
+            revealedCount.textContent = 24 - hiddenTiles.length;
+        }
+
+        // Reset all tiles
+        function resetGame() {
+            gridItems.forEach(tile => {
+                tile.classList.remove("hidden");
+            });
+            updateHiddenTiles();
+            updateRevealedCount();
+        }
+
+        // Reveal one random tile
+        function revealRandomTile() {
+            if (hiddenTiles.length === 0) {
+                stopTimer();
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * hiddenTiles.length);
+            hiddenTiles[randomIndex].classList.add("hidden");
+            updateHiddenTiles();
+            updateRevealedCount();
+        }
+
+        // Start revealing tiles
+        function startTimer() {
+            if (timer) return;
+            
+            const interval = Math.max(100, parseInt(timerIntervalInput.value) || 1000);
+            
+            startTimerBtn.disabled = true;
+            stopTimerBtn.disabled = false;
+            
+            // Do an initial reveal
+            revealRandomTile();
+            
+            // Set up the timer
+            timer = setInterval(() => {
+                revealRandomTile();
+            }, interval);
+        }
+
+        // Stop revealing tiles
+        function stopTimer() {
+            if (!timer) return;
+            
+            clearInterval(timer);
+            timer = null;
+            
+            startTimerBtn.disabled = false;
+            stopTimerBtn.disabled = true;
+        }
+
+        // Load images from folder
+        function loadImages(files) {
+            images = Array.from(files).filter(file => file.type.startsWith("image/"));
+            
+            if (images.length > 0) {
+                currentImageIndex = 0;
+                updateImage();
+                prevBtn.disabled = false;
+                nextBtn.disabled = false;
+            } else {
+                imageCounter.textContent = "No valid images found";
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+            }
+        }
+
+        // Update displayed image
+        function updateImage() {
+            if (images.length === 0) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                gameImage.src = e.target.result;
+                imageCounter.textContent = `${currentImageIndex + 1}/${images.length}`;
+                resetGame();
+            };
+            reader.readAsDataURL(images[currentImageIndex]);
+        }
+
+        // Previous image
+        function prevImage() {
+            if (images.length === 0) return;
+            
+            currentImageIndex = (currentImageIndex - 1 + images.length) % images.length;
+            updateImage();
+        }
+
+        // Next image
+        function nextImage() {
+            if (images.length === 0) return;
+            
+            currentImageIndex = (currentImageIndex + 1) % images.length;
+            updateImage();
+        }
+
+        // Event listeners
+        resetBtn.addEventListener("click", resetGame);
+        startTimerBtn.addEventListener("click", startTimer);
+        stopTimerBtn.addEventListener("click", stopTimer);
+        prevBtn.addEventListener("click", prevImage);
+        nextBtn.addEventListener("click", nextImage);
+        folderLoader.addEventListener("change", (e) => {
+            loadImages(e.target.files);
+        });
+
+        // Initialize the game
+        createGrid();
+    </script>
+</body>
+</html>
