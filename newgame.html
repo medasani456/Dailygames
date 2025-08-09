@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Reveal & Guess — Upgraded</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root{
+    --bg:#f0f8ff;
+    --accent:#2e8b57;
+    --tile-size:120px;
+  }
+  body{
+    margin:0;
+    font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    background: var(--bg);
+    color:#123;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    padding:16px;
+  }
+  h1{margin:6px 0;color:var(--accent);}
+  #container{width:100%;max-width:980px;}
+  .card{
+    background:rgba(255,255,255,0.9);
+    border-radius:10px;
+    padding:12px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.06);
+    margin-bottom:12px;
+  }
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  label{font-size:14px;}
+  input[type="file"]{display:block;}
+  select,input,button{font-size:14px;padding:8px;border-radius:6px;border:1px solid #cbd5e1;}
+  button{cursor:pointer;background:var(--accent);color:white;border:none;}
+  button.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent);}
+  #image-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(var(--tile-size),1fr));
+    gap:10px;
+    margin-top:12px;
+    justify-items:center;
+  }
+  .image-tile{
+    width:var(--tile-size);
+    height:var(--tile-size);
+    border-radius:8px;
+    background:#add8e6;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 4px 10px rgba(0,0,0,0.08);
+    touch-action:manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .image-tile img{
+    width:100%;height:100%;object-fit:cover;display:block;
+    transform-origin:center center;
+    opacity:0; transform:scale(.92);
+    transition:opacity .45s ease, transform .45s ease;
+    pointer-events:none;
+    user-select:none;
+  }
+  .image-tile.revealed img{opacity:1;transform:scale(1);}
+  .cover{
+    position:absolute;inset:0;background:linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.4));
+    display:flex;align-items:center;justify-content:center;font-weight:600;color:#333;font-size:14px;
+    transition:opacity .35s ease;
+    pointer-events:none;
+  }
+  .image-tile.partial .cover{opacity:.0;background:linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.75));}
+  .image-tile.disabled{opacity:.55;pointer-events:none;filter:grayscale(.12);}
+  #controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+  #guess-section{display:flex;gap:8px;align-items:center;margin-top:12px;}
+  #scoreboard{margin-top:8px;font-weight:600;}
+  #leaderboard{margin-top:8px;}
+  .small{font-size:13px;color:#444}
+  #progressBar{height:8px;background:#e6eef0;border-radius:8px;overflow:hidden;margin-top:8px}
+  #progressFill{height:100%;background:linear-gradient(90deg,var(--accent),#6aa66a);width:0%}
+  /* responsive tweaks */
+  @media (max-width:600px){
+    :root{--tile-size:96px}
+    .row{flex-direction:column;align-items:stretch}
+    #controls{flex-direction:column;align-items:stretch}
+  }
+  /* confetti canvas */
+  #confettiCanvas{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:9999}
+</style>
+</head>
+<body>
+  <canvas id="confettiCanvas"></canvas>
+  <div id="container">
+    <h1>Reveal & Guess — Upgraded</h1>
+
+    <div class="card" id="setupCard">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div class="small">Upload images (1–15)</div>
+          <input id="imageUpload" type="file" accept="image/*" multiple>
+        </div>
+        <div>
+          <label>Difficulty</label>
+          <select id="difficulty">
+            <option value="easy">Easy (50% visible)</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard (flash then hide)</option>
+          </select>
+        </div>
+        <div>
+          <label>Time per guess</label>
+          <select id="timePerGuess">
+            <option value="8">8s</option>
+            <option value="10" selected>10s</option>
+            <option value="15">15s</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button id="prepareBtn">Prepare Setup</button>
+          <button id="startBtn" class="ghost" disabled>Start Game</button>
+        </div>
+      </div>
+
+      <div id="setupPreview" style="margin-top:10px;"></div>
+
+      <div class="small" style="margin-top:10px;">
+        <strong>How it works:</strong> Upload images, enter labels in the fields shown below. Labels are hidden from players during the game. When you're done, click <em>Start Game</em>.
+      </div>
+    </div>
+
+    <div class="card" id="gameCard" style="display:none;">
+      <div id="controls" class="row">
+        <div style="min-width:180px;">
+          <div class="small">Timer: <span id="timerDisplay">--</span>s</div>
+          <div class="small">Hints left: <span id="hintsLeft">3</span></div>
+        </div>
+
+        <div style="flex:1;">
+          <div id="progressBar"><div id="progressFill"></div></div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="hintBtn">Use Hint</button>
+          <button id="shuffleBtn" class="ghost">Shuffle</button>
+          <button id="endBtn" class="ghost">End Game</button>
+        </div>
+      </div>
+
+      <div id="image-grid" style="margin-top:12px;"></div>
+
+      <div id="guess-section">
+        <input id="guessInput" type="text" placeholder="Enter your guess" style="flex:1;">
+        <button id="submitGuessBtn">Submit Guess</button>
+      </div>
+
+      <div id="scoreboard">
+        Score: <span id="score">0</span> |
+        Wrong Moves: <span id="wrongMoves">0</span> |
+        Remaining: <span id="remaining">0</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:6px 0 8px 0;">Leaderboard</h3>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <label>Difficulty</label>
+        <select id="boardDifficulty">
+          <option value="easy">Easy</option>
+          <option value="medium" selected>Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+        <button id="clearBoard" class="ghost">Clear Leaderboard</button>
+      </div>
+      <div id="leaderboard" style="margin-top:10px;"></div>
+    </div>
+
+    <audio id="matchSound" src="https://www.soundjay.com/buttons/sounds/button-3.mp3"></audio>
+    <audio id="wrongSound" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
+    <audio id="hintSound" src="https://www.soundjay.com/buttons/sounds/button-16.mp3"></audio>
+  </div>
+
+<script>
+/* ======= State ======= */
+let images = []; // {file, url, label}
+let tiles = [];  // DOM tile refs
+let currentIndex = -1;
+let score = 0;
+let wrongMoves = 0;
+let hintsLeft = 3;
+let remaining = 0;
+let countdown = null;
+let timePerGuess = 10;
+let timeLeft = 0;
+let difficulty = 'medium';
+let leaderboards = JSON.parse(localStorage.getItem('rg_leaderboards_v2') || '{}');
+const MAX_IMAGES = 15;
+
+/* ======= Helpers ======= */
+const $ = id => document.getElementById(id);
+function setText(id, txt){ $(id).textContent = txt; }
+function clamp(v,a,b){return Math.max(a, Math.min(b, v));}
+
+/* ======= Setup UI ======= */
+$('prepareBtn').addEventListener('click', prepareSetup);
+$('startBtn').addEventListener('click', startGame);
+$('imageUpload').addEventListener('change', handleFiles);
+$('submitGuessBtn').addEventListener('click', submitGuess);
+$('hintBtn').addEventListener('click', useHint);
+$('shuffleBtn').addEventListener('click', shuffleTiles);
+$('endBtn').addEventListener('click', endGameConfirmed);
+$('boardDifficulty').addEventListener('change', renderLeaderboard);
+$('clearBoard').addEventListener('click', clearLeaderboard);
+
+$('timePerGuess').addEventListener('change', ()=> {
+  timePerGuess = Number($('timePerGuess').value);
+});
+$('difficulty').addEventListener('change', ()=> difficulty = $('difficulty').value);
+
+/* ======= File handling & Setup preview ======= */
+function handleFiles(e){
+  const files = Array.from(e.target.files || []);
+  if(files.length === 0) return;
+  if(files.length > MAX_IMAGES){ alert('Please upload up to ' + MAX_IMAGES + ' images'); e.target.value=''; return; }
+  // prepare preview with label entry fields
+  const preview = $('setupPreview');
+  preview.innerHTML = '';
+  images = [];
+  files.forEach((file, idx) => {
+    const url = URL.createObjectURL(file);
+    images.push({ file, url, label: '' });
+    const div = document.createElement('div');
+    div.style.display='flex'; div.style.gap='8px'; div.style.alignItems='center'; div.style.marginTop='8px';
+    div.innerHTML = `
+      <div style="width:64px;height:64px;border-radius:6px;overflow:hidden;">
+        <img src="${url}" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <div style="flex:1;">
+        <div class="small">Label for image ${idx+1} (will be hidden from players)</div>
+        <input type="text" data-idx="${idx}" class="labelInput" placeholder="Enter hidden label">
+      </div>
+    `;
+    preview.appendChild(div);
+  });
+  // attach listeners for label inputs
+  preview.querySelectorAll('.labelInput').forEach(inp=>{
+    inp.addEventListener('input', (ev)=>{
+      const i = Number(ev.target.dataset.idx);
+      images[i].label = ev.target.value;
+    });
+  });
+  // enable start button only after at least 1 label non-empty
+  $('startBtn').disabled = images.length === 0;
+}
+
+/* ======= Prepare (validate labels) ======= */
+function prepareSetup(){
+  if(images.length === 0){ alert('Please upload images first.'); return; }
+  // require each image has a non-empty label
+  for(let i=0;i<images.length;i++){
+    if(!images[i].label || images[i].label.trim()===''){
+      const ok = confirm(`Image ${i+1} has no label. Do you want to continue without a label for it? (If you continue that tile will be auto-labeled "unknown")`);
+      if(!ok) return;
+      images[i].label = 'unknown';
+    }
+  }
+  // enable start
+  $('startBtn').disabled = false;
+  alert('Setup prepared. Click "Start Game" when ready. Labels are hidden during play.');
+}
+
+/* ======= Game Start ======= */
+function startGame(){
+  // grab difficulty/time selections
+  difficulty = $('difficulty').value;
+  timePerGuess = Number($('timePerGuess').value);
+  // initialize state
+  score = 0; wrongMoves = 0; hintsLeft = 3; remaining = images.length;
+  currentIndex = -1;
+  tiles = [];
+  setText('score', score); setText('wrongMoves', wrongMoves); setText('hintsLeft', hintsLeft); setText('remaining', remaining);
+
+  // render grid
+  renderImages();
+  // show game card
+  $('setupCard').style.display = 'none';
+  $('gameCard').style.display = 'block';
+  updateProgress();
+  // if easy mode, reveal partial overlays
+  if(difficulty === 'easy'){
+    document.querySelectorAll('.image-tile').forEach(t => t.classList.add('partial'));
+  }
+}
+
+/* ======= Render images grid (hidden labels) ======= */
+function renderImages(){
+  const grid = $('image-grid');
+  grid.innerHTML = '';
+  tiles = [];
+  // shuffle images initially
+  images = images.slice(); // copy
+  // create tiles
+  images.forEach((it, idx) => {
+    const tile = document.createElement('div');
+    tile.className = 'image-tile';
+    tile.dataset.index = idx;
+    tile.dataset.revealed = 'false';
+    tile.tabIndex = 0;
+    tile.innerHTML = `
+      <img src="${it.url}" alt="tile-${idx}">
+      <div class="cover">?</div>
+    `;
+    // click / touch to reveal (only if not currently one revealed)
+    tile.addEventListener('click', ()=> onTileClick(idx));
+    tile.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') onTileClick(idx); });
+    grid.appendChild(tile);
+    tiles[idx] = tile;
+  });
+  // for mobile, add some spacing
+  updateTileSize();
+  remaining = tiles.length;
+  setText('remaining', remaining);
+}
+
+/* responsive tile sizing for small screens */
+function updateTileSize(){
+  const w = window.innerWidth;
+  if(w < 420){ document.documentElement.style.setProperty('--tile-size','84px'); }
+  else if(w < 700){ document.documentElement.style.setProperty('--tile-size','96px'); }
+  else document.documentElement.style.setProperty('--tile-size','120px');
+}
+
+/* ======= Tile interactions ======= */
+function onTileClick(index){
+  if(currentIndex !== -1) return; // one reveal at a time
+  const tile = tiles[index];
+  if(!tile || tile.dataset.revealed === 'true') return;
+  currentIndex = index;
+  // Hard mode: flash the image briefly then hide again
+  if(difficulty === 'hard'){
+    // show image briefly
+    tile.classList.add('revealed');
+    setTimeout(()=> {
+      if(tile.dataset.revealed === 'true') return;
+      tile.classList.remove('revealed');
+      startTimerForGuess();
+    }, 700);
+  } else {
+    // Easy/Medium: reveal image (easy may have partial overlay present)
+    tile.classList.add('revealed');
+    startTimerForGuess();
+  }
+}
+
+/* ======= Timer & Guess flow ======= */
+function startTimerForGuess(){
+  stopTimer();
+  timeLeft = timePerGuess;
+  setText('timerDisplay', timeLeft);
+  countdown = setInterval(()=>{
+    timeLeft--;
+    setText('timerDisplay', timeLeft);
+    if(timeLeft <= 0){
+      stopTimer();
+      // auto submit wrong guess
+      processGuess('');
+    }
+  }, 1000);
+}
+
+function stopTimer(){
+  if(countdown) clearInterval(countdown);
+  countdown = null;
+}
+
+/* ======= Submit Guess ======= */
+function submitGuess(){
+  if(currentIndex === -1){ alert('Click an image to reveal it first.'); return; }
+  const guess = $('guessInput').value.trim();
+  processGuess(guess);
+}
+
+function processGuess(guessText){
+  stopTimer();
+  const idx = currentIndex;
+  const tile = tiles[idx];
+  const correct = (images[idx].label || '').trim().toLowerCase();
+  const guess = (guessText || '').trim().toLowerCase();
+  // scoring: base 10 for correct + bonus based on remaining time (floor)
+  if(guess && guess === correct){
+    const bonus = Math.max(0, Math.floor(timeLeft)); // faster => more bonus
+    const gain = 10 + bonus;
+    score += gain;
+    $('matchSound').play();
+    // mark tile as permanently revealed / disabled
+    tile.dataset.revealed = 'true';
+    tile.classList.add('revealed','disabled');
+  } else {
+    wrongMoves++;
+    score -= 2;
+    $('wrongSound').play();
+    // slight shake and keep revealed state as is, but disable further clicks
+    tile.classList.add('disabled');
+    // if wrong, reveal correct briefly then hide (except in easy where we keep reveal)
+    if(difficulty !== 'easy'){
+      const img = tile.querySelector('img');
+      // show answer overlay for 1.2s then hide if not correct
+      const answerOverlay = document.createElement('div');
+      answerOverlay.style.position='absolute';
+      answerOverlay.style.inset='0';
+      answerOverlay.style.display='flex';
+      answerOverlay.style.alignItems='center';
+      answerOverlay.style.justifyContent='center';
+      answerOverlay.style.background='rgba(0,0,0,0.45)';
+      answerOverlay.style.color='white';
+      answerOverlay.style.fontWeight='700';
+      answerOverlay.textContent = 'Answer: ' + (images[idx].label || 'unknown');
+      tile.appendChild(answerOverlay);
+      setTimeout(()=> {
+        if(answerOverlay && answerOverlay.parentNode) answerOverlay.remove();
+        tile.classList.remove('revealed'); // hide after showing
+      }, 1200);
+    }
+  }
+  // update UI
+  setText('score', score);
+  setText('wrongMoves', wrongMoves);
+  // mark tile as revealed permanently if correct OR easy mode (easy reveals persist)
+  if(tile.dataset.revealed === 'true' || difficulty === 'easy'){
+    // considered completed
+    remaining--;
+  } else {
+    // mark as completed either way: we want players to move on after attempt
+    tile.dataset.revealed = 'true';
+    remaining--;
+  }
+  setText('remaining', remaining);
+  // reset guess input & currentIndex
+  $('guessInput').value = '';
+  currentIndex = -1;
+  updateProgress();
+  checkGameEnd();
+}
+
+/* ======= Hints ======= */
+function useHint(){
+  if(hintsLeft <= 0){ alert('No hints left'); return; }
+  if(currentIndex === -1){ alert('Reveal an image first to request a hint.'); return; }
+  hintsLeft--;
+  $('hintSound').play();
+  setText('hintsLeft', hintsLeft);
+  // reveal first N letters of the label (depends on length)
+  const label = images[currentIndex].label || '';
+  const revealCount = Math.max(1, Math.floor(label.length / 3));
+  const hint = label.slice(0, revealCount).replace(/\S/g, '*') ? label.slice(0, revealCount) : '';
+  // show hint in the guess input (does not autofill exactly)
+  $('guessInput').value = hint;
+}
+
+/* ======= Shuffle ======= */
+function shuffleTiles(){
+  // simple Fisher-Yates shuffle of images and re-render
+  for(let i=images.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [images[i],images[j]] = [images[j],images[i]];
+  }
+  renderImages();
+  // maintain easy mode partial class
+  if(difficulty === 'easy') document.querySelectorAll('.image-tile').forEach(t => t.classList.add('partial'));
+}
+
+/* ======= Progress bar ======= */
+function updateProgress(){
+  const total = images.length || 1;
+  const done = total - remaining;
+  const pct = Math.round((done/total)*100);
+  $('progressFill').style.width = pct + '%';
+}
+
+/* ======= End / Check Game End ======= */
+function checkGameEnd(){
+  // end when remaining <= 0
+  if(remaining <= 0){
+    gameOver();
+  }
+}
+
+function endGameConfirmed(){
+  if(confirm('End the game now?')) gameOver(true);
+}
+
+/* ======= Game Over & Leaderboard ======= */
+function gameOver(force=false){
+  stopTimer();
+  // prompt for name (players will see this screen)
+  const playerName = prompt('Game Over! Enter your name for the leaderboard:','Player') || 'Player';
+  // award bonus for very low wrong moves
+  if(wrongMoves === 0) score += 20;
+  setText('score', score);
+  // save leaderboard per difficulty
+  const key = difficulty || 'medium';
+  if(!leaderboards[key]) leaderboards[key] = [];
+  leaderboards[key].push({name:playerName,score:score,wrongMoves:wrongMoves,date:new Date().toISOString()});
+  // sort & keep top 10
+  leaderboards[key].sort((a,b)=>b.score - a.score);
+  leaderboards[key] = leaderboards[key].slice(0,10);
+  localStorage.setItem('rg_leaderboards_v2', JSON.stringify(leaderboards));
+  renderLeaderboard();
+  // celebration if score is high (top 3)
+  const rank = leaderboards[key].findIndex(x=>x.name===playerName && x.score===score) + 1;
+  if(rank >0 && rank <= 3) {
+    runConfetti();
+    alert(`Nice! You placed #${rank} on the ${key} leaderboard with ${score} points.`);
+  } else {
+    alert(`Game over. You scored ${score} points.`);
+  }
+  // reset UI back to setup
+  resetToSetup();
+}
+
+function resetToSetup(){
+  // cleanup
+  images.forEach(it => {
+    try{ URL.revokeObjectURL(it.url); }catch(e){}
+  });
+  images = [];
+  tiles = [];
+  currentIndex = -1;
+  $('imageUpload').value = '';
+  $('setupPreview').innerHTML = '';
+  $('setupCard').style.display = 'block';
+  $('gameCard').style.display = 'none';
+  // reset scoreboard display
+  setText('score', 0); setText('wrongMoves', 0); setText('hintsLeft', 3);
+  $('startBtn').disabled = true;
+}
+
+/* ======= Leaderboard Rendering ======= */
+function renderLeaderboard(){
+  const d = $('boardDifficulty').value || 'medium';
+  const board = $('leaderboard');
+  const entries = (leaderboards[d] || []);
+  if(entries.length === 0){
+    board.innerHTML = '<div class="small">No scores yet for this difficulty.</div>';
+    return;
+  }
+  board.innerHTML = '<ol style="padding-left:18px;margin:6px 0;">' + entries.map(e=>{
+    const date = new Date(e.date).toLocaleString();
+    return `<li style="margin:6px 0;"><strong>${e.name}</strong> — ${e.score} pts — ${e.wrongMoves} wrong — <span class="small">${date}</span></li>`;
+  }).join('') + '</ol>';
+}
+
+/* ======= Clear Leaderboard ======= */
+function clearLeaderboard(){
+  if(!confirm('Clear all leaderboard data?')) return;
+  leaderboards = {};
+  localStorage.removeItem('rg_leaderboards_v2');
+  renderLeaderboard();
+}
+
+/* ======= Confetti (small impl) ======= */
+function runConfetti(){
+  const canvas = document.getElementById('confettiCanvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = innerWidth; canvas.height = innerHeight;
+  const pieces = [];
+  for(let i=0;i<120;i++){
+    pieces.push({
+      x: Math.random()*canvas.width,
+      y: Math.random()*-canvas.height,
+      vx: (Math.random()-0.5)*3,
+      vy: 2 + Math.random()*4,
+      size: 6 + Math.random()*6,
+      color: `hsl(${Math.random()*360}deg 70% 60%)`,
+      rot: Math.random()*360,
+      vrot: (Math.random()-0.5)*10
+    });
+  }
+  let t=0;
+  function frame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(const p of pieces){
+      p.x += p.vx; p.y += p.vy; p.rot += p.vrot;
+      ctx.save();
+      ctx.translate(p.x,p.y);
+      ctx.rotate(p.rot * Math.PI/180);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size*0.6);
+      ctx.restore();
+    }
+    t++;
+    if(t < 120) requestAnimationFrame(frame);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  frame();
+}
+
+/* ======= Misc init ======= */
+window.addEventListener('resize', updateTileSize);
+renderLeaderboard();
+
+/* ======= Keyboard support: Enter to submit guess ======= */
+$('guessInput').addEventListener('keydown', (e)=>{ if(e.key === 'Enter'){ submitGuess(); } });
+
+</script>
+</body>
+</html>
